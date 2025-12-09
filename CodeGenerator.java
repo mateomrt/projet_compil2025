@@ -160,6 +160,15 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitAddition(grammarTCLParser.AdditionContext ctx) {
         // TODO Auto-generated method stub
+        Program pLeft = visit(ctx.getChild(0));
+        int rLeft = this.nbrRegistre;               //Valeur de la dernière expression de l'abre de gauche
+        Program pRight = visit(ctx.getChild(1));
+        int rRight = this.nbrRegistre;              //Valeur de la dernière expression de l'abre de droite
+        int dest = getNewRegsitre();
+        Program p = new Program();
+        p.addInstruction(pLeft);
+        p.addInstruction(pRight);
+        Instruction instLeft = new UAL(UAL.Op.ADD,dest,rLeft,rRight);
         throw new UnsupportedOperationException("Unimplemented method 'visitAddition'");
     }
 
