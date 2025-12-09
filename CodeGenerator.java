@@ -2,16 +2,19 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Map;
 
-import Asm.*;
+import Asm.UAL;
+import Asm.UALi;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
+import Asm.Program;
 import Type.Type;
 import Type.UnknownType;
 
 public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements grammarTCLVisitor<Program> {
 
-    private int nbRegister = 0;
+    private int nbRegister = 3;
     private Dictionary<String, Integer> varToReg = new Hashtable<>();
     private Map<UnknownType,Type> types;
+
 
     /**
      * Constructeur
@@ -29,17 +32,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitNegation(grammarTCLParser.NegationContext ctx) {
         // TODO Auto-generated method stub
-        Program pCtx = visit(ctx.getChild(0));
-        if (pCtx.getInstructions().getLast() instanceof UALi instr) {
-            Program p = new Program();
-            p.addInstructions(pCtx);
-            if (instr.getImm() > 0) {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 0));
-            } else {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 1));
-            }
-            return p;
-        } else throw new UnsupportedOperationException("Unimplemented method 'visitNegation'");
+        throw new UnsupportedOperationException("Unimplemented method 'visitNegation'");
     }
 
     @Override
@@ -52,31 +45,27 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitOr(grammarTCLParser.OrContext ctx) {
         // TODO Auto-generated method stub
         Program pLeft = visit(ctx.getChild(0));
+        int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(1));
-        if (pLeft.getInstructions().getLast() instanceof UALi instrLeft && pRight.getInstructions().getLast() instanceof UALi instRight) {
-            Program p = new Program();
-            p.addInstructions(pLeft);
-            p.addInstructions(pRight);
-            if(instrLeft.getImm() + instRight.getImm() > 0) {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 1));
-            } else {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 0));
-            }
-            return p;
-        } else throw new UnsupportedOperationException("Unimplemented method 'visitOr'");
+        int rightAddr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pLeft);
+        p.addInstructions(pRight);
+        p.addInstruction(new UALi(UALi.Op.OR, getNewRegister(), leftAddr, rightAddr));
+        return p;
+        //throw new UnsupportedOperationException("Unimplemented method 'visitOr'");
     }
 
     @Override
     public Program visitOpposite(grammarTCLParser.OppositeContext ctx) {
         // TODO Auto-generated method stub
         Program pCtx = visit(ctx.getChild(0));
-        if (pCtx.getInstructions().getLast() instanceof UALi instr) {
-            Program p = new Program();
-            p.addInstructions(pCtx);
-            p.addInstruction(new UALi(UALi.Op.SUB, getNewRegister(), 0, instr.getImm()));
-            return p;
-        }
-        throw new UnsupportedOperationException("Unimplemented method 'visitOpposite'");
+        int addr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pCtx);
+        p.addInstruction(new UAL(UAL.Op.SUB, getNewRegister(), 0, addr));
+        return p;
+        //throw new UnsupportedOperationException("Unimplemented method 'visitOpposite'");
     }
 
     @Override
@@ -122,18 +111,15 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitAnd(grammarTCLParser.AndContext ctx) {
         // TODO Auto-generated method stub
         Program pLeft = visit(ctx.getChild(0));
+        int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(1));
-        if (pLeft.getInstructions().getLast() instanceof UALi instrLeft && pRight.getInstructions().getLast() instanceof UALi instRight) {
-            Program p = new Program();
-            p.addInstructions(pLeft);
-            p.addInstructions(pRight);
-            if(instrLeft.getImm() * instRight.getImm() > 0) {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 1));
-            } else {
-                p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 0));
-            }
-            return p;
-        } else throw new UnsupportedOperationException("Unimplemented method 'visitAnd'");
+        int rightAddr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pLeft);
+        p.addInstructions(pRight);
+        p.addInstruction(new UAL(UAL.Op.AND, getNewRegister(), leftAddr, rightAddr));
+        return p;
+        //throw new UnsupportedOperationException("Unimplemented method 'visitAnd'");
     }
 
     @Override
@@ -150,14 +136,15 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitMultiplication(grammarTCLParser.MultiplicationContext ctx) {
         // TODO Auto-generated method stub
         Program pLeft = visit(ctx.getChild(0));
+        int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(1));
-        if (pLeft.getInstructions().getLast() instanceof UALi instrLeft &&  pRight.getInstructions().getLast() instanceof UALi instRight) {
-            Program p = new Program();
-            p.addInstructions(pLeft);
-            p.addInstructions(pRight);
-            p.addInstruction(new UAL(UAL.Op.MUL, getNewRegister(), instrLeft.getDest(), instRight.getDest()));
-            return p;
-        } else throw new UnsupportedOperationException("Unimplemented method 'visitMultiplication'");
+        int rightAddr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pLeft);
+        p.addInstructions(pRight);
+        p.addInstruction(new UAL(UAL.Op.MUL, getNewRegister(), leftAddr, rightAddr));
+        return p;
+        //throw new UnsupportedOperationException("Unimplemented method 'visitMultiplication'");
     }
 
     @Override
@@ -205,6 +192,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitAssignment(grammarTCLParser.AssignmentContext ctx) {
         // TODO Auto-generated method stub
+
         throw new UnsupportedOperationException("Unimplemented method 'visitAssignment'");
     }
 
@@ -256,6 +244,8 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitMain(grammarTCLParser.MainContext ctx) {
         // TODO Auto-generated method stub
+        Program p = new Program();
+        p.addInstruction(new UAL(UAL.Op.XOR, 0, 0, 0));
         throw new UnsupportedOperationException("Unimplemented method 'visitMain'");
     }
 
