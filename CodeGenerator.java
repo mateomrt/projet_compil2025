@@ -2,10 +2,8 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Map;
 
-import Asm.UAL;
-import Asm.UALi;
+import Asm.*;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
-import Asm.Program;
 import Type.Type;
 import Type.UnknownType;
 
