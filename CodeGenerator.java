@@ -2,10 +2,8 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Map;
 
-import Asm.UAL;
-import Asm.UALi;
+import Asm.*;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
-import Asm.Program;
 import Type.Type;
 import Type.UnknownType;
 
@@ -158,6 +156,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             p.addInstructions(pLeft);
             p.addInstructions(pRight);
             p.addInstruction(new UAL(UAL.Op.MUL, getNewRegister(), instrLeft.getDest(), instRight.getDest()));
+            return p;
         } else throw new UnsupportedOperationException("Unimplemented method 'visitMultiplication'");
     }
 
@@ -235,9 +234,9 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitReturn(grammarTCLParser.ReturnContext ctx) {
-        Program expr = visit(ctx.getChild(0));
+        visit(ctx.getChild(0));
         Program program = new Program();
-        program.addInstruction(new Mem(Mem.Op.ST, expr. , 0));
+        program.addInstruction(new Mem(Mem.Op.ST, this.nbRegister , 0));
         program.addInstruction(new Ret());
         return program;
     }
