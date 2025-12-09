@@ -1,7 +1,7 @@
 import java.util.Map;
 
+import Asm.*;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
-import Asm.Program;
 import Type.Type;
 import Type.UnknownType;
 
@@ -163,8 +163,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitReturn(grammarTCLParser.ReturnContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitReturn'");
+        Program expr = visit(ctx.getChild(0));
+        Program program = new Program();
+        program.addInstruction(new Mem(Mem.Op.ST, expr. , 0));
+        program.addInstruction(new Ret());
+        return program;
     }
 
     @Override
