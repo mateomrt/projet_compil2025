@@ -2,16 +2,15 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Map;
 
-import Asm.UAL;
-import Asm.UALi;
+import Asm.*;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
-import Asm.Program;
 import Type.Type;
 import Type.UnknownType;
 
 public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements grammarTCLVisitor<Program> {
 
     private int nbRegister = 3;
+    private int nbLabels = 3;
     private Dictionary<String, Integer> varToReg = new Hashtable<>();
     private Map<UnknownType,Type> types;
 
@@ -27,6 +26,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public int getNewRegister() {
         nbRegister++;
         return nbRegister;
+    }
+
+    public String getNewLabel() {
+        nbLabels++;
+        return "label" + nbLabels;
     }
 
     @Override
@@ -209,7 +213,35 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitIf(grammarTCLParser.IfContext ctx) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitIf'");
+        Program pCond = visit(ctx.getChild(0));
+        int addr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pCond);
+
+        String labelElse = getNewLabel();
+        String labelFinInstr = getNewLabel();
+
+        int valUn = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, valUn, 0, 1));
+        // Si condition pas validee on dodge les instructions du if
+        p.addInstruction(new CondJump(CondJump.Op.JINF, addr, valUn, labelElse));
+
+        // Corp du if
+        Program pCorp = visit(ctx.getChild(1));
+        p.addInstructions(pCorp);
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelFinInstr));
+
+        p.addInstruction(new UAL(labelElse, UAL.Op.XOR, getNewRegister(), getNewRegister(), getNewRegister()));
+
+        if(ctx.getChildCount() > 2) {
+            Program pElse = visit(ctx.getChild(2));
+            p.addInstructions(pElse);
+        }
+
+        // Instr utile juste pour le label
+        p.addInstruction(new UAL(labelFinInstr, UAL.Op.XOR, getNewRegister(), getNewRegister(), getNewRegister()));
+        
+        return p;
     }
 
     @Override
@@ -226,8 +258,13 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitReturn(grammarTCLParser.ReturnContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitReturn'");
+        Program pCtx = visit(ctx.getChild(0));
+        int addr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pCtx);
+        // On transmet la derniere valeur calculée
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, addr));
+        return p;
     }
 
     @Override
