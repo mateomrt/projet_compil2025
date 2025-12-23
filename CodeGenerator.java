@@ -33,6 +33,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         return "label" + nbLabels;
     }
 
+    public Instruction getLabelInstruction(String labelName) {
+        // Renvoie une instruction vide qui permet de sauter à un endroit spécifique
+        return new UAL(labelName, UAL.Op.XOR, 0, 0, 0);
+    }
+
     @Override
     public Program visitNegation(grammarTCLParser.NegationContext ctx) {
         Program pCtx = visit(ctx.getChild(0));
@@ -231,7 +236,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         p.addInstructions(pCorp);
         p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelFinInstr));
 
-        p.addInstruction(new UAL(labelElse, UAL.Op.XOR, getNewRegister(), getNewRegister(), getNewRegister()));
+        p.addInstruction(getLabelInstruction(labelElse));
 
         if(ctx.getChildCount() > 2) {
             Program pElse = visit(ctx.getChild(2));
@@ -239,7 +244,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         }
 
         // Instr utile juste pour le label
-        p.addInstruction(new UAL(labelFinInstr, UAL.Op.XOR, getNewRegister(), getNewRegister(), getNewRegister()));
+        p.addInstruction(getLabelInstruction(labelFinInstr));
         
         return p;
     }
@@ -252,8 +257,34 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitFor(grammarTCLParser.ForContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitFor'");
+        Program pInit = visit(ctx.getChild(0));
+        Program pCond = visit(ctx.getChild(1));
+        Program pIncr = visit(ctx.getChild(2));
+        Program pCorp = visit(ctx.getChild(3));
+
+        String labelDebFor = getNewLabel();
+        String labelFin = getNewLabel();
+
+        Program p = new Program();
+        p.addInstructions(pInit);
+        // Pour pouvoir y retourner en fin de boucle
+        p.addInstruction(getLabelInstruction(labelDebFor));
+        p.addInstructions(pCond);
+        int addrCond = this.nbRegister;
+
+        // Vérif de la condition
+        int valUn = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, valUn, 0, 1));
+        // Si condition pas validee on dodge les instructions du if
+        p.addInstruction(new CondJump(CondJump.Op.JINF, addrCond, valUn, labelFin));
+
+        p.addInstructions(pCorp);
+        p.addInstructions(pIncr);
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelDebFor));
+
+        p.addInstruction(getLabelInstruction(labelFin));
+
+        return p;
     }
 
     @Override
