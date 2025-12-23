@@ -251,14 +251,37 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitWhile(grammarTCLParser.WhileContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitWhile'");
+        Program pCond = visit(ctx.getChild(0));
+        int addrCond = this.nbRegister;
+        Program pCorp = visit(ctx.getChild(1));
+
+        String labelDebWhile = getNewLabel();
+        String labelFin = getNewLabel();
+
+        Program p = new Program();
+        p.addInstructions(pCond);
+        // Pour pouvoir y retourner en fin de boucle
+        p.addInstruction(getLabelInstruction(labelDebWhile));
+        p.addInstructions(pCond);
+
+        // Vérif de la condition
+        int valUn = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, valUn, 0, 1));
+        // Si condition pas validee on dodge les instructions du if
+        p.addInstruction(new CondJump(CondJump.Op.JINF, addrCond, valUn, labelFin));
+
+        p.addInstructions(pCorp);
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelDebWhile));
+        p.addInstruction(getLabelInstruction(labelFin));
+
+        return p;
     }
 
     @Override
     public Program visitFor(grammarTCLParser.ForContext ctx) {
         Program pInit = visit(ctx.getChild(0));
         Program pCond = visit(ctx.getChild(1));
+        int addrCond = this.nbRegister;
         Program pIncr = visit(ctx.getChild(2));
         Program pCorp = visit(ctx.getChild(3));
 
@@ -270,7 +293,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         // Pour pouvoir y retourner en fin de boucle
         p.addInstruction(getLabelInstruction(labelDebFor));
         p.addInstructions(pCond);
-        int addrCond = this.nbRegister;
 
         // Vérif de la condition
         int valUn = getNewRegister();
