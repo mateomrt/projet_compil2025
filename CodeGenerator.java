@@ -53,7 +53,49 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitComparison(grammarTCLParser.ComparisonContext ctx) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitComparison'");
+        Program pLeft = visit(ctx.getChild(0));
+        int leftAddr = this.nbRegister;
+        Program pRight = visit(ctx.getChild(2));
+        int rightAddr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pLeft);
+        p.addInstructions(pRight);
+
+        String trueLabel = getNewLabel();
+        String falseLabel = getNewLabel();
+        String endLabel = getNewLabel();
+
+        String ope = ctx.getChild(1).getText();
+
+        if(ope.equals(">")) {
+            p.addInstruction(new CondJump(CondJump.Op.JSUP, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        } else if(ope.equals("<")) {
+            p.addInstruction(new CondJump(CondJump.Op.JINF, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        } else if(ope.equals(">=")) {
+            int newReg = getNewRegister();
+            p.addInstruction(new UALi(UALi.Op.SUB, newReg, leftAddr, 1));
+            p.addInstruction(new CondJump(CondJump.Op.JSUP, newReg, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        } else {
+            // Cas ope == '<='
+            int newReg = getNewRegister();
+            p.addInstruction(new UALi(UALi.Op.ADD, newReg, leftAddr, 1));
+            p.addInstruction(new CondJump(CondJump.Op.JSUP, newReg, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        }
+
+        // Bloc qui renvoie 1
+        p.addInstruction(new UALi(trueLabel, UALi.Op.ADD, getNewRegister(), 0, 1));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        // Bloc qui renvoie 0
+        p.addInstruction(new UAL(falseLabel, UAL.Op.XOR, getNewRegister(), 0, 0));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        p.addInstruction(getLabelInstruction(endLabel));
+        return p;
     }
 
     @Override
@@ -150,8 +192,39 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitEquality(grammarTCLParser.EqualityContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitEquality'");
+        Program pLeft = visit(ctx.getChild(0));
+        int leftAddr = this.nbRegister;
+        Program pRight = visit(ctx.getChild(2));
+        int rightAddr = this.nbRegister;
+        Program p = new Program();
+        p.addInstructions(pLeft);
+        p.addInstructions(pRight);
+
+        String trueLabel = getNewLabel();
+        String falseLabel = getNewLabel();
+        String endLabel = getNewLabel();
+
+        String ope = ctx.getChild(1).getText();
+
+        if(ope.equals("==")) {
+            p.addInstruction(new CondJump(CondJump.Op.JEQU, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        } else {
+            // Cas ope == '!='
+            p.addInstruction(new CondJump(CondJump.Op.JNEQ, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+        }
+
+        // Bloc qui renvoie 1
+        p.addInstruction(new UALi(trueLabel, UALi.Op.ADD, getNewRegister(), 0, 1));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        // Bloc qui renvoie 0
+        p.addInstruction(new UAL(falseLabel, UAL.Op.XOR, getNewRegister(), 0, 0));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        p.addInstruction(getLabelInstruction(endLabel));
+        return p;
     }
 
     @Override
