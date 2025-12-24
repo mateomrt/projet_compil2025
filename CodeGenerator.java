@@ -40,7 +40,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitNegation(grammarTCLParser.NegationContext ctx) {
-        Program pCtx = visit(ctx.getChild(0));
+        Program pCtx = visit(ctx.getChild(1));
         int addr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pCtx);
@@ -60,7 +60,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitOr(grammarTCLParser.OrContext ctx) {
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
-        Program pRight = visit(ctx.getChild(1));
+        Program pRight = visit(ctx.getChild(2));
         int rightAddr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pLeft);
@@ -71,7 +71,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitOpposite(grammarTCLParser.OppositeContext ctx) {
-        Program pCtx = visit(ctx.getChild(0));
+        Program pCtx = visit(ctx.getChild(1));
         int addr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pCtx);
@@ -95,7 +95,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitBrackets(grammarTCLParser.BracketsContext ctx) {
-        return visit(ctx.getChild(0));
+        return visit(ctx.getChild(1));
     }
 
     @Override
@@ -117,7 +117,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitAnd(grammarTCLParser.AndContext ctx) {
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
-        Program pRight = visit(ctx.getChild(1));
+        Program pRight = visit(ctx.getChild(2));
         int rightAddr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pLeft);
@@ -136,9 +136,10 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitMultiplication(grammarTCLParser.MultiplicationContext ctx) {
+        // TODO Faire pour les diff opérateurs
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
-        Program pRight = visit(ctx.getChild(1));
+        Program pRight = visit(ctx.getChild(2));
         int rightAddr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pLeft);
@@ -163,12 +164,12 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitAddition(grammarTCLParser.AdditionContext ctx) {
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
-        Program pRight = visit(ctx.getChild(1));
+        Program pRight = visit(ctx.getChild(2));
         int rightAddr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pLeft);
         p.addInstructions(pRight);
-        String ope = ctx.getText();
+        String ope = ctx.getChild(1).getText();
         if(ope.equals("+")) {
             p.addInstruction(new UAL(UAL.Op.ADD, getNewRegister(), leftAddr, rightAddr));
         } else {
@@ -218,7 +219,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitIf(grammarTCLParser.IfContext ctx) {
         // TODO Auto-generated method stub
-        Program pCond = visit(ctx.getChild(0));
+        Program pCond = visit(ctx.getChild(2));
         int addr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pCond);
@@ -232,14 +233,14 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         p.addInstruction(new CondJump(CondJump.Op.JINF, addr, valUn, labelElse));
 
         // Corp du if
-        Program pCorp = visit(ctx.getChild(1));
+        Program pCorp = visit(ctx.getChild(4));
         p.addInstructions(pCorp);
         p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelFinInstr));
 
         p.addInstruction(getLabelInstruction(labelElse));
 
-        if(ctx.getChildCount() > 2) {
-            Program pElse = visit(ctx.getChild(2));
+        if(ctx.getChildCount() > 5) {
+            Program pElse = visit(ctx.getChild(6));
             p.addInstructions(pElse);
         }
 
@@ -251,9 +252,9 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitWhile(grammarTCLParser.WhileContext ctx) {
-        Program pCond = visit(ctx.getChild(0));
+        Program pCond = visit(ctx.getChild(2));
         int addrCond = this.nbRegister;
-        Program pCorp = visit(ctx.getChild(1));
+        Program pCorp = visit(ctx.getChild(4));
 
         String labelDebWhile = getNewLabel();
         String labelFin = getNewLabel();
@@ -279,11 +280,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitFor(grammarTCLParser.ForContext ctx) {
-        Program pInit = visit(ctx.getChild(0));
-        Program pCond = visit(ctx.getChild(1));
+        Program pInit = visit(ctx.getChild(2));
+        Program pCond = visit(ctx.getChild(4));
         int addrCond = this.nbRegister;
-        Program pIncr = visit(ctx.getChild(2));
-        Program pCorp = visit(ctx.getChild(3));
+        Program pIncr = visit(ctx.getChild(6));
+        Program pCorp = visit(ctx.getChild(8));
 
         String labelDebFor = getNewLabel();
         String labelFin = getNewLabel();
@@ -311,7 +312,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitReturn(grammarTCLParser.ReturnContext ctx) {
-        Program pCtx = visit(ctx.getChild(0));
+        Program pCtx = visit(ctx.getChild(1));
         int addr = this.nbRegister;
         Program p = new Program();
         p.addInstructions(pCtx);
