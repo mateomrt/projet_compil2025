@@ -177,7 +177,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitMultiplication(grammarTCLParser.MultiplicationContext ctx) {
-        // TODO Faire pour les diff opérateurs
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(2));
@@ -401,6 +400,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         p.addInstructions(pCtx);
         // On transmet la derniere valeur calculée
         p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, addr));
+        p.addInstruction(new Ret());
         return p;
     }
 
