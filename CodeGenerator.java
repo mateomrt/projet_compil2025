@@ -421,7 +421,9 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         // TODO Auto-generated method stub
         Program p = new Program();
         p.addInstruction(new UAL(UAL.Op.XOR, 0, 0, 0));
-        throw new UnsupportedOperationException("Unimplemented method 'visitMain'");
+        Program pCtx = visit(ctx);
+        p.addInstructions(pCtx);
+        return p;
     }
 
         
