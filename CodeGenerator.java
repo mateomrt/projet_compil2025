@@ -293,14 +293,10 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     }
 
     @Override
-    public Program visitBlock(grammarTCLParser.BlockContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitBlock'");
-    }
+    public Program visitBlock(grammarTCLParser.BlockContext ctx) { return visit(ctx.getChild(1)); }
 
     @Override
     public Program visitIf(grammarTCLParser.IfContext ctx) {
-        // TODO Auto-generated method stub
         Program pCond = visit(ctx.getChild(2));
         int addr = this.nbRegister;
         Program p = new Program();
