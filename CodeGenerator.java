@@ -52,7 +52,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitComparison(grammarTCLParser.ComparisonContext ctx) {
-        // TODO Auto-generated method stub
         Program pLeft = visit(ctx.getChild(0));
         int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(2));
@@ -183,10 +182,21 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         int leftAddr = this.nbRegister;
         Program pRight = visit(ctx.getChild(2));
         int rightAddr = this.nbRegister;
+
+        String ope = ctx.getChild(1).getText();
+
         Program p = new Program();
         p.addInstructions(pLeft);
         p.addInstructions(pRight);
-        p.addInstruction(new UAL(UAL.Op.MUL, getNewRegister(), leftAddr, rightAddr));
+
+        if(ope.equals("*")) {
+            p.addInstruction(new UAL(UAL.Op.MUL, getNewRegister(), leftAddr, rightAddr));
+        } else if(ope.equals("/")) {
+            p.addInstruction(new UAL(UAL.Op.DIV, getNewRegister(), leftAddr, rightAddr));
+        } else {
+            p.addInstruction(new UAL(UAL.Op.MOD, getNewRegister(), leftAddr, rightAddr));
+        }
+
         return p;
     }
 
