@@ -320,7 +320,16 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     }
 
     @Override
-    public Program visitBlock(grammarTCLParser.BlockContext ctx) { return visit(ctx.getChild(1)); }
+    public Program visitBlock(grammarTCLParser.BlockContext ctx) {
+        Program p = new Program();
+
+        for(int i=1; i<ctx.getChildCount()-1; i++) {
+            Program pInstr = visit(ctx.getChild(i));
+            p.addInstructions(pInstr);
+        }
+
+        return p;
+    }
 
     @Override
     public Program visitIf(grammarTCLParser.IfContext ctx) {
@@ -429,8 +438,17 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitCore_fct(grammarTCLParser.Core_fctContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitCore_fct'");
+        Program p = new Program();
+
+        for(int i=1; i<ctx.getChildCount()-4; i++) {
+            Program pCtx = visit(ctx.getChild(i));
+            p.addInstructions(pCtx);
+        }
+
+        Program pExpr = visit(ctx.getChild(ctx.getChildCount()-3));
+        p.addInstructions(pExpr);
+
+        return p;
     }
 
     @Override
