@@ -12,6 +12,8 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     private int nbRegister = 3;
     private int nbLabels = 3;
     private Dictionary<String, Integer> varToReg = new Hashtable<>();
+    //  nomFormat=fctName-NbParam -> paramName
+    private Dictionary<String, String> paramToVar = new Hashtable<>();
     private Map<UnknownType,Type> types;
 
 
@@ -141,8 +143,25 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitCall(grammarTCLParser.CallContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitCall'");
+        String fctName = ctx.getChild(0).getText();
+        Program p = new Program();
+
+        int nbParam = 0;
+        for(int i=2; i<ctx.getChildCount()-1; i+=2) {
+            // On stock la var de chaque param dans le reg alloué lors de la decl
+            Program pParam = visit(ctx.getChild(i));
+            int addrParam = this.nbRegister;
+            p.addInstructions(pParam);
+            p.addInstruction(new UALi(UALi.Op.ADD, varToReg.get(paramToVar.get(fctName+"-"+nbParam)), addrParam, 0));
+            nbParam++;
+        }
+
+        p.addInstruction(new JumpCall(JumpCall.Op.CALL, fctName));
+
+        // On ajoute la valeur de retour dans un nouveau reg
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), varToReg.get(fctName+"-ret"), 0));
+
+        return p;
     }
 
     @Override
@@ -464,12 +483,18 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             // Encodage de la forme nom_fct+"-"+ind_param
             // Pour ne pas écraser de potentiel variable hors de la fct
             // Car un nom de var ne peut pas contenir '-'
-            varToReg.put(ctx.getChild(1).getText()+"-"+nbParam, getNewRegister());
+            varToReg.put(ctx.getChild(i).getText(), getNewRegister());
+            paramToVar.put(ctx.getChild(1).getText()+"-"+nbParam, ctx.getChild(i).getText());
             nbParam++;
         }
 
         Program pCorpFct = visit(ctx.getChild(ctx.getChildCount()-1));
         p.addInstructions(pCorpFct);
+        // Stock le registre où est stockée la val de retour de la fct
+        int addrRet = this.nbRegister;
+        varToReg.put(ctx.getChild(1).getText()+"-ret", addrRet);
+
+        p.addInstruction(new Ret());
 
         return p;
     }
