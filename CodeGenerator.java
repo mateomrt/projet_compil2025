@@ -298,9 +298,20 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitAssignment(grammarTCLParser.AssignmentContext ctx) {
-        // TODO Auto-generated method stub
+        Program p = new Program();
 
-        throw new UnsupportedOperationException("Unimplemented method 'visitAssignment'");
+        if(ctx.getChildCount() <= 4) {
+            // Variable classique (pas un tableau)
+            int varReg = varToReg.get(ctx.getChild(0).getText());
+            Program pCtx = visit(ctx.getChild(2));
+            int addr = this.nbRegister;
+            p.addInstructions(pCtx);
+            p.addInstruction(new UALi(UALi.Op.ADD, varReg, addr, 0));
+        } else {
+            // TODO Variable tableau
+        }
+        
+        return p;
     }
 
     @Override
