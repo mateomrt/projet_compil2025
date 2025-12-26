@@ -435,10 +435,25 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitDecl_fct(grammarTCLParser.Decl_fctContext ctx) {
-        // TODO Auto-generated method stub
         Program p = new Program();
+
+        // Ajout du label qui correspond au nom de la ftc
         p.addInstruction(getLabelInstruction(ctx.getChild(1).getText()));
-        throw new UnsupportedOperationException("Unimplemented method 'visitDecl_fct'");
+
+        // Ajout des params comme var
+        int nbParam = 0;
+        for(int i=4; i<ctx.getChildCount()-2; i+=3) {
+            // Encodage de la forme nom_fct+"-"+ind_param
+            // Pour ne pas écraser de potentiel variable hors de la fct
+            // Car un nom de var ne peut pas contenir '-'
+            varToReg.put(ctx.getChild(1).getText()+"-"+nbParam, getNewRegister());
+            nbParam++;
+        }
+
+        Program pCorpFct = visit(ctx.getChild(ctx.getChildCount()-1));
+        p.addInstructions(pCorpFct);
+
+        return p;
     }
 
     @Override
