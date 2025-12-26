@@ -275,8 +275,19 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitDeclaration(grammarTCLParser.DeclarationContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitDeclaration'");
+        Program p = new Program();
+        int varReg = getNewRegister();
+        varToReg.put(ctx.getChild(1).getText(), varReg);
+
+        if(ctx.getChildCount() > 3) {
+            // Si on assigne une valeur à la variable
+            Program pCtx = visit(ctx.getChild(3));
+            int resAddr = this.nbRegister;
+            p.addInstructions(pCtx);
+            p.addInstruction(new UALi(UALi.Op.ADD, varReg, resAddr, 0));
+        }
+
+        return p;
     }
 
     @Override
@@ -409,6 +420,8 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitDecl_fct(grammarTCLParser.Decl_fctContext ctx) {
         // TODO Auto-generated method stub
+        Program p = new Program();
+        p.addInstruction(getLabelInstruction(ctx.getChild(1).getText()));
         throw new UnsupportedOperationException("Unimplemented method 'visitDecl_fct'");
     }
 
