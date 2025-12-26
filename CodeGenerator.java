@@ -151,7 +151,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         Program p = new Program();
         p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, value));
         return p;
-        //throw new UnsupportedOperationException("Unimplemented method 'visitBoolean'");
     }
 
     @Override
@@ -292,8 +291,14 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitPrint(grammarTCLParser.PrintContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitPrint'");
+        Program p = new Program();
+        Program pCtx = visit(ctx.getChild(2));
+        int addr = this.nbRegister;
+
+        p.addInstructions(pCtx);
+        p.addInstruction(new IO(IO.Op.PRINT, addr));
+
+        return p;
     }
 
     @Override
@@ -310,7 +315,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         } else {
             // TODO Variable tableau
         }
-        
+
         return p;
     }
 
