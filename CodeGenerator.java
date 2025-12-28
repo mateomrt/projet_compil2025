@@ -11,6 +11,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     private int nbRegister = 3;
     private int nbLabels = 3;
+    private int stackPointer = 0;
     private Dictionary<String, Integer> varToReg = new Hashtable<>();
     //  nomFormat=fctName-NbParam -> paramName
     private Dictionary<String, String> paramToVar = new Hashtable<>();
@@ -132,8 +133,44 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitTab_access(grammarTCLParser.Tab_accessContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitTab_access'");
+        Program p = new Program();
+
+        Program pVar = visit(ctx.getChild(0));
+        int addrTaille = this.nbRegister;
+        int addrVar = addrTaille+1;
+
+        Program pInd = visit(ctx.getChild(2));
+        int addrInd = this.nbRegister;
+
+        p.addInstructions(pVar);
+        p.addInstructions(pInd);
+
+        String debLoopLabel = getNewLabel();
+        String finLoopLabel = getNewLabel();
+
+        // Cte = à 10
+        int addrVal10 = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, addrVal10, 0, 10));
+
+        // Boucle pour mettre l'indice à une val <10
+        // Concrétement on cherche le chunk où elle se trouve
+        p.addInstruction(getLabelInstruction(debLoopLabel));
+        p.addInstruction(new CondJump(CondJump.Op.JINF, addrInd, addrVal10, finLoopLabel));
+        p.addInstruction(new UALi(UALi.Op.SUB, addrInd, addrInd, 10));
+        // On change de chunk pour accéder au suivant
+        p.addInstruction(new Mem(Mem.Op.LD, addrVar, addrVar+10));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, debLoopLabel));
+
+        p.addInstruction(getLabelInstruction(finLoopLabel));
+
+        // On y stock l'adresse dans la variable dans la pile
+        int addrFinale = getNewRegister();
+        p.addInstruction(new UAL(UAL.Op.ADD, addrFinale, addrVar, addrInd));
+
+        // On la renvoie dans un nouveau registre
+        p.addInstruction(new Mem(Mem.Op.LD, getNewRegister(), addrFinale));
+
+        return p;
     }
 
     @Override
