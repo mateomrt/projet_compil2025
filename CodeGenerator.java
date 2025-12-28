@@ -293,8 +293,45 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitTab_initialization(grammarTCLParser.Tab_initializationContext ctx) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitTab_initialization'");
+        Program p = new Program();
+
+        int nbElt = ctx.getChildCount()-4;
+
+        int addrTaille = getNewRegister();
+
+        p.addInstruction(new UALi(UALi.Op.ADD, addrTaille, 0, nbElt));
+        p.addInstruction(new Mem(Mem.Op.ST, addrTaille, stackPointer++));
+
+        // On ajoute les valeurs du tableau par chunk
+        int nbEltLeft = nbElt;
+        int nextElt = 1;
+        while(nbEltLeft > 0) {
+            int cpyNbEltLeft = nbEltLeft;
+            for(int i=0; i<cpyNbEltLeft%10; i++) {
+                Program pElt = visit(ctx.getChild(nextElt));
+                int addrElt = this.nbRegister;
+
+                // On met la valeur dans la pile
+                p.addInstructions(pElt);
+                p.addInstruction(new Mem(Mem.Op.ST, addrElt, stackPointer++));
+
+                nbEltLeft--;
+                // Par deux car y'a la virgule
+                nextElt += 2;
+            }
+
+            // On ajoute au bout du chunk l'adresse du prochain
+            int addrNextChunk = stackPointer;
+            int addrRegNextChunk = getNewRegister();
+
+            p.addInstruction(new UALi(UALi.Op.ADD, addrRegNextChunk, 0, addrNextChunk));
+            p.addInstruction(new Mem(Mem.Op.ST, addrRegNextChunk, stackPointer++));
+        }
+
+        // On renvoie l'adresse du premier elt du tableau
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, nbElt));
+
+        return p;
     }
 
     @Override
