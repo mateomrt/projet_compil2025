@@ -356,13 +356,13 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitBase_type(grammarTCLParser.Base_typeContext ctx) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitBase_type'");
+        return new Program();
     }
 
     @Override
     public Program visitTab_type(grammarTCLParser.Tab_typeContext ctx) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visitTab_type'");
+        return new Program();
     }
 
     @Override
@@ -398,15 +398,64 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitAssignment(grammarTCLParser.AssignmentContext ctx) {
         Program p = new Program();
 
+        int varReg = varToReg.get(ctx.getChild(0).getText());
+
         if(ctx.getChildCount() <= 4) {
             // Variable classique (pas un tableau)
-            int varReg = varToReg.get(ctx.getChild(0).getText());
             Program pCtx = visit(ctx.getChild(2));
             int addr = this.nbRegister;
             p.addInstructions(pCtx);
             p.addInstruction(new UALi(UALi.Op.ADD, varReg, addr, 0));
         } else {
-            // TODO Variable tableau
+            // Variable tableau
+
+            // On stock l'addr pour pouvoir l'utiliser et la décaler plus tard
+            int addrVarReg = getNewRegister();
+            p.addInstruction(new UALi(UALi.Op.ADD, addrVarReg, 0, varReg));
+
+            // Pour chaque dimension du tableau on récupère l'adresse du ss-tabl
+            for(int i=2; i<ctx.getChildCount()-4 ; i+=3) {
+
+                // On y stock le pointeur de la tete du tableau
+                int addrTab = getNewRegister();
+                p.addInstruction(new UAL(UAL.Op.ADD, addrTab, 0, addrTab));
+                // On décale pour pointer vers la première valeur du tab
+                p.addInstruction(new UALi(UALi.Op.ADD, addrTab, addrTab, 1));
+
+                Program pInd = visit(ctx.getChild(i));
+                int addrInd = this.nbRegister;
+
+                p.addInstructions(pInd);
+
+                String debLoopLabel = getNewLabel();
+                String finLoopLabel = getNewLabel();
+
+                // Cte = à 10
+                int addrVal10 = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrVal10, 0, 10));
+
+                // Boucle pour mettre l'indice à une val <10
+                // Concrétement on cherche le chunk où elle se trouve
+                p.addInstruction(getLabelInstruction(debLoopLabel));
+                p.addInstruction(new CondJump(CondJump.Op.JINF, addrInd, addrVal10, finLoopLabel));
+                p.addInstruction(new UALi(UALi.Op.SUB, addrInd, addrInd, 10));
+                // On change de chunk pour accéder au suivant
+                p.addInstruction(new Mem(Mem.Op.LD, addrTab, addrTab+10));
+                p.addInstruction(new JumpCall(JumpCall.Op.JMP, debLoopLabel));
+
+                p.addInstruction(getLabelInstruction(finLoopLabel));
+
+                p.addInstruction(new UAL(UAL.Op.ADD, addrVarReg, addrTab, addrInd));
+
+
+            }
+
+            Program pVal = visit(ctx.getChild(ctx.getChildCount()-2));
+            int addrVal = this.nbRegister;
+            p.addInstructions(pVal);
+
+            // On la renvoie dans un nouveau registre
+            p.addInstruction(new Mem(Mem.Op.ST, addrVal, addrVarReg));
         }
 
         return p;
