@@ -624,11 +624,17 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitMain(grammarTCLParser.MainContext ctx) {
-        // TODO Auto-generated method stub
         Program p = new Program();
         p.addInstruction(new UAL(UAL.Op.XOR, 0, 0, 0));
-        Program pCtx = visit(ctx);
-        p.addInstructions(pCtx);
+
+        for(int i=0; i<ctx.getChildCount()-3; i++) {
+            Program pFct = visit(ctx.getChild(i));
+            p.addInstructions(pFct);
+        }
+
+        Program pCorp = visit(ctx.getChild(ctx.getChildCount()-2));
+        p.addInstructions(pCorp);
+        
         return p;
     }
 
