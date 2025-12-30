@@ -224,9 +224,9 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitVariable(grammarTCLParser.VariableContext ctx) {
-        String varName = ctx.getText();
+        String varName = ctx.getChild(0).getText();
         Program p = new Program();
-        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, varToReg.get(varName)));
+        p.addInstruction(new UAL(UAL.Op.ADD, getNewRegister(), 0, varToReg.get(varName)));
         return p;
     }
 
@@ -385,11 +385,10 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitPrint(grammarTCLParser.PrintContext ctx) {
         Program p = new Program();
-        Program pCtx = visit(ctx.getChild(2));
-        int addr = this.nbRegister;
+        String varName = ctx.getChild(2).getText();
+        int regVar = varToReg.get(varName);
 
-        p.addInstructions(pCtx);
-        p.addInstruction(new IO(IO.Op.PRINT, addr));
+        p.addInstruction(new IO(IO.Op.PRINT, regVar));
 
         return p;
     }
@@ -411,7 +410,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
             // On stock l'addr pour pouvoir l'utiliser et la décaler plus tard
             int addrVarReg = getNewRegister();
-            p.addInstruction(new UALi(UALi.Op.ADD, addrVarReg, 0, varReg));
+            p.addInstruction(new UAL(UAL.Op.ADD, addrVarReg, 0, varReg));
 
             // Pour chaque dimension du tableau on récupère l'adresse du ss-tabl
             for(int i=2; i<ctx.getChildCount()-4 ; i+=3) {
@@ -634,7 +633,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
         Program pCorp = visit(ctx.getChild(ctx.getChildCount()-2));
         p.addInstructions(pCorp);
-        
+
         return p;
     }
 
