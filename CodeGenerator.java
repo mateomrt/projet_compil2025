@@ -295,7 +295,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitTab_initialization(grammarTCLParser.Tab_initializationContext ctx) {
         Program p = new Program();
 
-        int nbElt = ctx.getChildCount()-4;
+        int nbElt = (ctx.getChildCount()-1)/2;
 
         int addrTaille = getNewRegister();
 
