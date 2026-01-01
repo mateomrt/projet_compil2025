@@ -501,7 +501,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
         // Instr utile juste pour le label
         p.addInstruction(getLabelInstruction(labelFinInstr));
-        
+
         return p;
     }
 
@@ -634,8 +634,10 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         Program pCorp = visit(ctx.getChild(ctx.getChildCount()-2));
         p.addInstructions(pCorp);
 
+        p.addInstruction(new Stop());
+
         return p;
     }
 
-        
+
 }
