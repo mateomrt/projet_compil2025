@@ -576,7 +576,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         Program p = new Program();
         p.addInstructions(pCtx);
         // On transmet la derniere valeur calculée
-        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, addr));
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), addr, 0));
         p.addInstruction(new Ret());
         return p;
     }
