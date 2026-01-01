@@ -230,7 +230,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     public Program visitVariable(grammarTCLParser.VariableContext ctx) {
         String varName = ctx.getChild(0).getText();
         Program p = new Program();
-        p.addInstruction(new UAL(UAL.Op.ADD, getNewRegister(), 0, varToReg.get(varName)));
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), varToReg.get(varName), 0));
         return p;
     }
 
