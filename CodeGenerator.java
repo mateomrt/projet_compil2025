@@ -203,7 +203,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
     @Override
     public Program visitBoolean(grammarTCLParser.BooleanContext ctx) {
-        int value = Integer.parseInt(ctx.getText());
+        String boolVal = ctx.getChild(0).getText();
+        int value = 0;
+        if(boolVal.equals("true")) {
+            value = 1;
+        }
         Program p = new Program();
         p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, value));
         return p;
