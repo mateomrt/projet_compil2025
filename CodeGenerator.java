@@ -9,7 +9,7 @@ import Type.UnknownType;
 
 public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements grammarTCLVisitor<Program> {
 
-    private int nbRegister = 3;
+    private int nbRegister = 1;
     private int nbLabels = 3;
     private int stackPointer = 0;
     private Dictionary<String, Integer> varToReg = new Hashtable<>();
