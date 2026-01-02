@@ -137,7 +137,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
 
         Program pVar = visit(ctx.getChild(0));
         int addrTaille = this.nbRegister;
-        int addrVar = addrTaille+1;
 
         Program pInd = visit(ctx.getChild(2));
         int addrInd = this.nbRegister;
@@ -145,30 +144,40 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         p.addInstructions(pVar);
         p.addInstructions(pInd);
 
-        String debLoopLabel = getNewLabel();
-        String finLoopLabel = getNewLabel();
+        int addrPntr = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, addrPntr, addrTaille, 0));
+        // On saute la case de la taille du tab
+        p.addInstruction(new UALi(UALi.Op.ADD, addrPntr, addrPntr, 1));
 
         // Cte = à 10
         int addrVal10 = getNewRegister();
         p.addInstruction(new UALi(UALi.Op.ADD, addrVal10, 0, 10));
 
+        String debLoopLabel = getNewLabel();
+        String finLoopLabel = getNewLabel();
+
         // Boucle pour mettre l'indice à une val <10
         // Concrétement on cherche le chunk où elle se trouve
         p.addInstruction(getLabelInstruction(debLoopLabel));
+
         p.addInstruction(new CondJump(CondJump.Op.JINF, addrInd, addrVal10, finLoopLabel));
+
+        // ===== LOOP =====
         p.addInstruction(new UALi(UALi.Op.SUB, addrInd, addrInd, 10));
         // On change de chunk pour accéder au suivant
-        p.addInstruction(new Mem(Mem.Op.LD, addrVar, addrVar+10));
+        int addrNextChunk = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, addrNextChunk, addrPntr, 10));
+        p.addInstruction(new Mem(Mem.Op.LD, addrPntr, addrNextChunk));
         p.addInstruction(new JumpCall(JumpCall.Op.JMP, debLoopLabel));
+        // ================
 
         p.addInstruction(getLabelInstruction(finLoopLabel));
 
         // On y stock l'adresse dans la variable dans la pile
-        int addrFinale = getNewRegister();
-        p.addInstruction(new UAL(UAL.Op.ADD, addrFinale, addrVar, addrInd));
+        p.addInstruction(new UAL(UAL.Op.ADD, addrPntr, addrPntr, addrInd));
 
         // On la renvoie dans un nouveau registre
-        p.addInstruction(new Mem(Mem.Op.LD, getNewRegister(), addrFinale));
+        p.addInstruction(new Mem(Mem.Op.LD, getNewRegister(), addrPntr));
 
         return p;
     }
@@ -302,22 +311,28 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         int nbElt = (ctx.getChildCount()-1)/2;
 
         int addrTaille = getNewRegister();
+        int pntrTab = stackPointer;
 
         p.addInstruction(new UALi(UALi.Op.ADD, addrTaille, 0, nbElt));
-        p.addInstruction(new Mem(Mem.Op.ST, addrTaille, stackPointer++));
+
+        int addrNewSP = getNewRegister();
+        p.addInstruction(new UALi(UALi.Op.ADD, addrNewSP, 0, stackPointer++));
+        p.addInstruction(new Mem(Mem.Op.ST, addrTaille, addrNewSP));
 
         // On ajoute les valeurs du tableau par chunk
         int nbEltLeft = nbElt;
         int nextElt = 1;
         while(nbEltLeft > 0) {
-            int cpyNbEltLeft = nbEltLeft;
-            for(int i=0; i<cpyNbEltLeft%10; i++) {
+            int tailleChunk = Math.min(10, nbEltLeft);
+            for(int i=0; i<tailleChunk; i++) {
                 Program pElt = visit(ctx.getChild(nextElt));
                 int addrElt = this.nbRegister;
 
                 // On met la valeur dans la pile
                 p.addInstructions(pElt);
-                p.addInstruction(new Mem(Mem.Op.ST, addrElt, stackPointer++));
+                int addrNewSP2 = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrNewSP2, 0, stackPointer++));
+                p.addInstruction(new Mem(Mem.Op.ST, addrElt, addrNewSP2));
 
                 nbEltLeft--;
                 // Par deux car y'a la virgule
@@ -333,7 +348,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         }
 
         // On renvoie l'adresse du premier elt du tableau
-        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, nbElt));
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, pntrTab));
 
         return p;
     }
@@ -413,17 +428,17 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             // Variable tableau
 
             // On stock l'addr pour pouvoir l'utiliser et la décaler plus tard
-            int addrVarReg = getNewRegister();
-            p.addInstruction(new UAL(UAL.Op.ADD, addrVarReg, 0, varReg));
+            int addrPntr = getNewRegister();
+            p.addInstruction(new UAL(UAL.Op.ADD, addrPntr, varReg, 0));
 
             // Pour chaque dimension du tableau on récupère l'adresse du ss-tabl
             for(int i=2; i<ctx.getChildCount()-4 ; i+=3) {
 
                 // On y stock le pointeur de la tete du tableau
                 int addrTab = getNewRegister();
-                p.addInstruction(new UAL(UAL.Op.ADD, addrTab, 0, addrTab));
-                // On décale pour pointer vers la première valeur du tab
-                p.addInstruction(new UALi(UALi.Op.ADD, addrTab, addrTab, 1));
+
+                // Décalage pour sauter la taille du tab
+                p.addInstruction(new UALi(UALi.Op.ADD, addrPntr, addrPntr, 1));
 
                 Program pInd = visit(ctx.getChild(i));
                 int addrInd = this.nbRegister;
@@ -442,13 +457,17 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
                 p.addInstruction(getLabelInstruction(debLoopLabel));
                 p.addInstruction(new CondJump(CondJump.Op.JINF, addrInd, addrVal10, finLoopLabel));
                 p.addInstruction(new UALi(UALi.Op.SUB, addrInd, addrInd, 10));
+
+                int addrNextChunk = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrNextChunk, addrPntr, 10));
+
                 // On change de chunk pour accéder au suivant
-                p.addInstruction(new Mem(Mem.Op.LD, addrTab, addrTab+10));
+                p.addInstruction(new Mem(Mem.Op.LD, addrPntr, addrNextChunk));
                 p.addInstruction(new JumpCall(JumpCall.Op.JMP, debLoopLabel));
 
                 p.addInstruction(getLabelInstruction(finLoopLabel));
 
-                p.addInstruction(new UAL(UAL.Op.ADD, addrVarReg, addrTab, addrInd));
+                p.addInstruction(new UAL(UAL.Op.ADD, addrPntr, addrPntr, addrInd));
 
 
             }
@@ -458,7 +477,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             p.addInstructions(pVal);
 
             // On la renvoie dans un nouveau registre
-            p.addInstruction(new Mem(Mem.Op.ST, addrVal, addrVarReg));
+            p.addInstruction(new Mem(Mem.Op.ST, addrVal, addrPntr));
         }
 
         return p;
