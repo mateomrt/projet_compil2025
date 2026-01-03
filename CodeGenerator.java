@@ -5,6 +5,7 @@ import java.util.Map;
 import Asm.*;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 import Type.Type;
+import Type.ArrayType;
 import Type.UnknownType;
 
 public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements grammarTCLVisitor<Program> {
@@ -407,7 +408,12 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         String varName = ctx.getChild(2).getText();
         int regVar = varToReg.get(varName);
 
-        p.addInstruction(new IO(IO.Op.PRINT, regVar));
+        if(types.get(varName) instanceof ArrayType) {
+            // La variable a affiché est un tableau
+        } else {
+            // La bariable n'est pas un tableau
+            p.addInstruction(new IO(IO.Op.PRINT, regVar));
+        }
 
         return p;
     }
@@ -426,6 +432,9 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             p.addInstruction(new UALi(UALi.Op.ADD, varReg, addr, 0));
         } else {
             // Variable tableau
+            // Cte = à 10
+            int addrVal10 = getNewRegister();
+            p.addInstruction(new UALi(UALi.Op.ADD, addrVal10, 0, 10));
 
             // On stock l'addr pour pouvoir l'utiliser et la décaler plus tard
             int addrPntr = getNewRegister();
@@ -434,23 +443,99 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             // Pour chaque dimension du tableau on récupère l'adresse du ss-tabl
             for(int i=2; i<ctx.getChildCount()-4 ; i+=3) {
 
-                // On y stock le pointeur de la tete du tableau
-                int addrTab = getNewRegister();
+                Program pInd = visit(ctx.getChild(i));
+                int addrInd = this.nbRegister;
+                p.addInstructions(pInd);
+
+                int addrTaille = getNewRegister();
+                p.addInstruction(new Mem(Mem.Op.LD, addrTaille, addrPntr));
+
+                String labelSizeOk = getNewLabel();
+                p.addInstruction(new CondJump(CondJump.Op.JINF, addrInd, addrTaille, labelSizeOk));
+
+                int addrNewTaille = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrNewTaille, addrInd, 1));
+
+                // chunksExistants = (size + 9) / 10
+                int addrChunksExist = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrChunksExist, addrTaille, 9));
+                p.addInstruction(new UAL(UAL.Op.DIV, addrChunksExist, addrChunksExist, addrVal10));
+
+                // chunksVoulus = (newSize + 9) / 10
+                int addrChunksVoulus = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrChunksVoulus, addrNewTaille, 9));
+                p.addInstruction(new UAL(UAL.Op.DIV, addrChunksVoulus, addrChunksVoulus, addrVal10));
+
+                // chunksACreer = chunksVoulus - chunksExistants
+                int addrChunksACreer = getNewRegister();
+                p.addInstruction(new UAL(UAL.Op.SUB, addrChunksACreer, addrChunksVoulus, addrChunksExist));
+
+                int addrCurrChunk = getNewRegister();
+                p.addInstruction(new UAL(UAL.Op.ADD, addrCurrChunk, addrPntr, 0));
+                p.addInstruction(new UALi(UALi.Op.ADD, addrCurrChunk, addrCurrChunk, 1));
+
+                // Init bouble for
+                int addrILoop = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrILoop, 0, 0));
+                String labelDebForLoop = getNewLabel();
+                String labelCorpForLoop = getNewLabel();
+                String labelFinForLoop = getNewLabel();
+                p.addInstruction(getLabelInstruction(labelDebForLoop));
+
+                // Vérif ind
+                p.addInstruction(new CondJump(CondJump.Op.JINF, addrILoop, addrChunksExist, labelCorpForLoop));
+                p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelFinForLoop));
+
+                // Corp boucle
+                p.addInstruction(getLabelInstruction(labelCorpForLoop));
+                int tmp = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, tmp, addrCurrChunk, 10));
+                p.addInstruction(new Mem(Mem.Op.LD, addrCurrChunk, tmp));
+
+                // Fin de boucle
+                p.addInstruction(new UALi(UALi.Op.ADD, addrILoop, addrILoop, 1));
+                p.addInstruction(new JumpCall(JumpCall.Op.JMP, labelDebForLoop));
+                p.addInstruction(getLabelInstruction(labelFinForLoop));
+
+                String debLoopAlloc = getNewLabel();
+                String finLoopAlloc = getNewLabel();
+
+                p.addInstruction(getLabelInstruction(debLoopAlloc));
+                p.addInstruction(new CondJump(CondJump.Op.JEQU, addrChunksACreer, 0, finLoopAlloc));
+
+                // Création d'un chunk
+                int addrNewChunk = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrNewChunk, 0, stackPointer));
+
+                // Init des 10 cases à 0
+                for(int j=0; j<10; j++) {
+                    p.addInstruction(new Mem(Mem.Op.ST, 0, stackPointer++));
+                }
+
+                // Ptr vers le chunk suivant = 0
+                p.addInstruction(new Mem(Mem.Op.ST, 0, stackPointer++));
+
+                // Chaînage du nouveau chunk a l'ancien
+                int addrPtrNext = getNewRegister();
+                p.addInstruction(new UALi(UALi.Op.ADD, addrPtrNext, addrCurrChunk, 10));
+                p.addInstruction(new Mem(Mem.Op.ST, addrNewChunk, addrPtrNext));
+
+                p.addInstruction(new UAL(UAL.Op.ADD, addrCurrChunk, addrNewChunk, 0));
+                p.addInstruction(new UALi(UALi.Op.SUB, addrChunksACreer, addrChunksACreer, 1));
+                p.addInstruction(new JumpCall(JumpCall.Op.JMP, debLoopAlloc));
+
+                p.addInstruction(getLabelInstruction(finLoopAlloc));
+
+                // Mise à jour de la taille du tableau dans la prem addr
+                p.addInstruction(new Mem(Mem.Op.ST, addrNewTaille, addrPntr));
+
+                p.addInstruction(getLabelInstruction(labelSizeOk));
 
                 // Décalage pour sauter la taille du tab
                 p.addInstruction(new UALi(UALi.Op.ADD, addrPntr, addrPntr, 1));
 
-                Program pInd = visit(ctx.getChild(i));
-                int addrInd = this.nbRegister;
-
-                p.addInstructions(pInd);
-
                 String debLoopLabel = getNewLabel();
                 String finLoopLabel = getNewLabel();
-
-                // Cte = à 10
-                int addrVal10 = getNewRegister();
-                p.addInstruction(new UALi(UALi.Op.ADD, addrVal10, 0, 10));
 
                 // Boucle pour mettre l'indice à une val <10
                 // Concrétement on cherche le chunk où elle se trouve
