@@ -234,7 +234,29 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         Program p = new Program();
         p.addInstructions(pLeft);
         p.addInstructions(pRight);
-        p.addInstruction(new UAL(UAL.Op.AND, getNewRegister(), leftAddr, rightAddr));
+
+        String secondLabel = getNewLabel();
+        String falseLabel = getNewLabel();
+        String trueLabel = getNewLabel();
+        String endLabel = getNewLabel();
+
+        p.addInstruction(new CondJump(CondJump.Op.JSUP, leftAddr, 0, secondLabel));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+
+        p.addInstruction(getLabelInstruction(secondLabel));
+        p.addInstruction(new CondJump(CondJump.Op.JSUP, rightAddr, 0, trueLabel));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
+
+        p.addInstruction(getLabelInstruction(trueLabel));
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 1));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        p.addInstruction(getLabelInstruction(falseLabel));
+        p.addInstruction(new UALi(UALi.Op.ADD, getNewRegister(), 0, 0));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, endLabel));
+
+        p.addInstruction(getLabelInstruction(endLabel));
+
         return p;
     }
 
@@ -822,7 +844,11 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
     @Override
     public Program visitMain(grammarTCLParser.MainContext ctx) {
         Program p = new Program();
+
+        String mainLabel = getNewLabel();
+
         p.addInstruction(new UAL(UAL.Op.XOR, 0, 0, 0));
+        p.addInstruction(new JumpCall(JumpCall.Op.JMP, mainLabel));
 
         for(int i=0; i<ctx.getChildCount()-3; i++) {
             Program pFct = visit(ctx.getChild(i));
@@ -830,6 +856,7 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         }
 
         Program pCorp = visit(ctx.getChild(ctx.getChildCount()-2));
+        p.addInstruction(getLabelInstruction(mainLabel));
         p.addInstructions(pCorp);
 
         p.addInstruction(new Stop());
