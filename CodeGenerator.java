@@ -77,15 +77,17 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
             p.addInstruction(new CondJump(CondJump.Op.JINF, leftAddr, rightAddr, trueLabel));
             p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
         } else if(ope.equals(">=")) {
-            int newReg = getNewRegister();
-            p.addInstruction(new UALi(UALi.Op.SUB, newReg, leftAddr, 1));
-            p.addInstruction(new CondJump(CondJump.Op.JSUP, newReg, rightAddr, trueLabel));
+            //int newReg = getNewRegister();
+            //p.addInstruction(new UALi(UALi.Op.SUB, newReg, leftAddr, 1)); //Faudrait pas supp ca
+            p.addInstruction(new CondJump(CondJump.Op.JSUP, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new CondJump(CondJump.Op.JEQU, leftAddr, rightAddr, trueLabel)); // et ajouté ca ???
             p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
         } else {
             // Cas ope == '<='
-            int newReg = getNewRegister();
-            p.addInstruction(new UALi(UALi.Op.ADD, newReg, leftAddr, 1));
-            p.addInstruction(new CondJump(CondJump.Op.JSUP, newReg, rightAddr, trueLabel));
+            //int newReg = getNewRegister();
+            //p.addInstruction(new UALi(UALi.Op.ADD, newReg, leftAddr, 1)); //Faudrait pas supp ca
+            p.addInstruction(new CondJump(CondJump.Op.JINF, leftAddr, rightAddr, trueLabel));
+            p.addInstruction(new CondJump(CondJump.Op.JEQU, leftAddr, rightAddr, trueLabel));  // et ajouté ca ???
             p.addInstruction(new JumpCall(JumpCall.Op.JMP, falseLabel));
         }
 
