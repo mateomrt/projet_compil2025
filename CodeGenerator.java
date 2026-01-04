@@ -712,7 +712,6 @@ public class CodeGenerator  extends AbstractParseTreeVisitor<Program> implements
         String labelFin = getNewLabel();
 
         Program p = new Program();
-        p.addInstructions(pCond);
         // Pour pouvoir y retourner en fin de boucle
         p.addInstruction(getLabelInstruction(labelDebWhile));
         p.addInstructions(pCond);
